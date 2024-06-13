@@ -10,7 +10,7 @@ from flask_cors import CORS, cross_origin
 def add_user():
     data = request.get_json()
 
-    # Verificar que todos los campos necesarios estén presentes
+    
     required_fields = ['username', 'email', 'password', 'role_id']
     for field in required_fields:
         if field not in data:
