@@ -156,8 +156,10 @@ def login():
     user = User.query.filter_by(username=username).first()
 
     if user and check_password_hash(user.password, password):
+        role_id = user.role_id  # Obtener el role_id del usuario
+
         # Aquí puedes generar un token JWT u otra lógica de autenticación según tus necesidades
-        return jsonify({'message': 'Login successful'}), 200
+        return jsonify({'message': 'Login successful', 'role_id': role_id}), 200
     else:
         return jsonify({'message': 'Invalid username or password'}), 401
 
@@ -183,13 +185,48 @@ def get_user_test_results(user_id):
     if not user:
         return jsonify({"error": "Usuario no encontrado"}), 404
 
-    test_results = TestResult.query.filter_by(user_id=user_id).all()
+    test_results = (
+        db.session.query(TestResult, User.username, Module.title, Course.name)
+        .join(User)
+        .join(Module)
+        .join(Course)
+        .filter(TestResult.user_id == user_id)
+        .all()
+    )
+
     results_list = [
         {
-            'id': result.id,
-            'module_id': result.module_id,
-            'test_score': result.test_score,
-            'username': user.username  
+            'id': result.TestResult.id,
+            'module_id': result.TestResult.module_id,
+            'test_score': result.TestResult.test_score,
+            'username': result.username,
+            'module_title': result.title,
+            'course_name': result.name
+        } for result in test_results
+    ]
+    return jsonify(results_list), 200
+
+#ver todos los datps
+@app.route('/test_results/all', methods=['GET'])
+def get_all_test_results():
+    test_results = (
+        db.session.query(TestResult, User.username, Module.title, Course.name)
+        .join(User)
+        .join(Module)
+        .join(Course)
+        .all()
+    )
+
+    results_list = [
+        {
+            'id': result.TestResult.id,
+            'user_id': result.TestResult.user_id,
+            'module_id': result.TestResult.module_id,
+            'course_id': result.TestResult.course_id,
+            'test_score': result.TestResult.test_score,
+            'username': result.username,
+            'module_title': result.title,
+            'course_name': result.name
         } for result in test_results
     ]
     return jsonify(results_list), 200
