@@ -2,6 +2,7 @@ from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 from flask_mysqldb import MySQL
 from flask_cors import CORS, cross_origin
+from flask_migrate import Migrate
 
 app = Flask(__name__)
 CORS(app)
@@ -17,8 +18,9 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 mysql = MySQL(app)
 db = SQLAlchemy(app)
+migrate = Migrate(app, db)
 
-from app.models import User, Course, Module, Role
+from app.models import User, Course, Module, Role, TestResult
 
 @app.before_request
 def setup_database():

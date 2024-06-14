@@ -1,6 +1,7 @@
 from flask import jsonify, request
 from app import app, db
-from app.models import User, Course, Module, Role
+from flask_login import login_required, current_user
+from app.models import User, Course, Module, Role, TestResult
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_cors import CORS, cross_origin
 
@@ -9,8 +10,6 @@ from flask_cors import CORS, cross_origin
 @app.route('/users', methods=['POST'])
 def add_user():
     data = request.get_json()
-
-    
     required_fields = ['username', 'email', 'password', 'role_id']
     for field in required_fields:
         if field not in data:
@@ -161,3 +160,85 @@ def login():
         return jsonify({'message': 'Login successful'}), 200
     else:
         return jsonify({'message': 'Invalid username or password'}), 401
+
+# Agregar un nuevo resultado de prueba
+@app.route('/test_results', methods=['POST'])
+def add_test_result():
+    user_id = request.json['user_id']
+    module_id = request.json['module_id']
+    course_id = request.json['course_id']  # Agregar esta línea para obtener el course_id
+    test_score = request.json['test_score']
+
+    new_test_result = TestResult(user_id=user_id, module_id=module_id, course_id=course_id, test_score=test_score)
+    db.session.add(new_test_result)
+    db.session.commit()
+
+    return jsonify({'message': 'Test result added successfully'}), 201
+
+
+# Obtener todos los resultados de prueba para un usuario específico
+@app.route('/users/<int:user_id>/test_results', methods=['GET'])
+def get_user_test_results(user_id):
+    user = User.query.get(user_id)
+    if not user:
+        return jsonify({"error": "Usuario no encontrado"}), 404
+
+    test_results = TestResult.query.filter_by(user_id=user_id).all()
+    results_list = [
+        {
+            'id': result.id,
+            'module_id': result.module_id,
+            'test_score': result.test_score,
+            'username': user.username  
+        } for result in test_results
+    ]
+    return jsonify(results_list), 200
+
+# Obtener un resultado de prueba específico
+@app.route('/test_results/<int:result_id>', methods=['GET'])
+def get_test_result(result_id):
+    test_result = TestResult.query.get_or_404(result_id)
+    result_info = {
+        'id': test_result.id,
+        'user_id': test_result.user_id,
+        'module_id': test_result.module_id,
+        'test_score': test_result.test_score
+    }
+    return jsonify(result_info), 200
+
+# Actualizar un resultado de prueba por su ID
+@app.route('/test_results/<int:result_id>', methods=['PUT'])
+def update_test_result(result_id):
+    test_result = TestResult.query.get_or_404(result_id)
+    test_result.test_score = request.json['test_score']
+
+    db.session.commit()
+
+    return jsonify({'message': 'Test result updated successfully'}), 200
+
+# Eliminar un resultado de prueba por su ID
+@app.route('/test_results/<int:result_id>', methods=['DELETE'])
+def delete_test_result(result_id):
+    test_result = TestResult.query.get_or_404(result_id)
+    db.session.delete(test_result)
+    db.session.commit()
+    return jsonify({'message': 'Test result deleted successfully'}), 200
+
+# Obtener las notas de los estudiantes (requiere autenticación de administrador)
+@app.route('/api/grades', methods=['GET'])
+@login_required
+def get_grades():
+    if current_user.role_id != 2:  # Suponiendo que el ID del rol de administrador es 2
+        return jsonify({"error": "No tienes permiso para acceder a esta información"}), 403
+
+    students = User.query.filter(User.role_id != 2).all()
+    grades = []
+    for student in students:
+        for result in student.test_results:
+            grades.append({
+                "username": student.username,
+                "email": student.email,
+                "module_title": result.module.title,
+                "test_score": result.test_score
+            })
+    return jsonify(grades), 200
