@@ -279,3 +279,12 @@ def get_grades():
                 "test_score": result.test_score
             })
     return jsonify(grades), 200
+
+# Obtener el ID del usuario por su nombre de usuario
+@app.route('/user_id/<string:username>', methods=['GET'])
+def get_user_id(username):
+    user = User.query.filter_by(username=username).first()
+    if user:
+        return jsonify({'user_id': user.id}), 200
+    else:
+        return jsonify({'error': 'User not found'}), 404
