@@ -170,8 +170,15 @@ def add_test_result():
     module_id = request.json['module_id']
     course_id = request.json['course_id']  # Agregar esta línea para obtener el course_id
     test_score = request.json['test_score']
+    
+    # Verificar el número de intentos
+    attempts = TestResult.query.filter_by(user_id=user_id, module_id=module_id).count()
 
-    new_test_result = TestResult(user_id=user_id, module_id=module_id, course_id=course_id, test_score=test_score)
+    if attempts >= 3:
+        return jsonify({'message:': 'Haz alcanzado el maximo d eintentos'})
+    
+    new_attempt = attempts + 1
+    new_test_result = TestResult(user_id=user_id, module_id=module_id, course_id=course_id, test_score=test_score, attempt=new_attempt)
     db.session.add(new_test_result)
     db.session.commit()
 
@@ -201,7 +208,8 @@ def get_user_test_results(user_id):
             'test_score': result.TestResult.test_score,
             'username': result.username,
             'module_title': result.title,
-            'course_name': result.name
+            'course_name': result.name,
+            'attempt': result.TestResult.attempt
         } for result in test_results
     ]
     return jsonify(results_list), 200
@@ -224,6 +232,7 @@ def get_all_test_results():
             'module_id': result.TestResult.module_id,
             'course_id': result.TestResult.course_id,
             'test_score': result.TestResult.test_score,
+            'attempt': result.TestResult.attempt,
             'username': result.username,
             'module_title': result.title,
             'course_name': result.name
@@ -239,7 +248,8 @@ def get_test_result(result_id):
         'id': test_result.id,
         'user_id': test_result.user_id,
         'module_id': test_result.module_id,
-        'test_score': test_result.test_score
+        'test_score': test_result.test_score,
+        'attempt': test_result.attempt
     }
     return jsonify(result_info), 200
 
@@ -248,6 +258,8 @@ def get_test_result(result_id):
 def update_test_result(result_id):
     test_result = TestResult.query.get_or_404(result_id)
     test_result.test_score = request.json['test_score']
+    if 'attempt' in request.json:
+        test_result.attempt = request.json['attempt']
 
     db.session.commit()
 
@@ -288,3 +300,14 @@ def get_user_id(username):
         return jsonify({'user_id': user.id}), 200
     else:
         return jsonify({'error': 'User not found'}), 404
+
+
+# Verificar el número de intentos para un usuario y módulo específico
+@app.route('/check_attempts', methods=['GET'])
+def check_attempts():
+    user_id = request.args.get('user_id')
+    module_id = request.args.get('module_id')
+
+    attempts = TestResult.query.filter_by(user_id=user_id, module_id=module_id).count()
+
+    return jsonify({'attempts': attempts}), 200

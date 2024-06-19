@@ -52,6 +52,7 @@ class TestResult(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     module_id = db.Column(db.Integer, db.ForeignKey('module.id'), nullable=False)
     course_id = db.Column(db.Integer, db.ForeignKey('course.id'), nullable=False)
+    attempt = db.Column(db.Integer, nullable=False)
     test_score = db.Column(db.Float, nullable=False)
     user = relationship('User', back_populates='test_results')
     module = relationship('Module', back_populates='test_results')
