@@ -27,7 +27,7 @@ def setup_database():
     db.create_all()
 
     # Crear roles si no existen
-    roles = ['Admin', 'Instructor', 'Student']
+    roles = ['Student', 'Admin']
     for role_name in roles:
         role = Role.query.filter_by(name=role_name).first()
         if role is None:
